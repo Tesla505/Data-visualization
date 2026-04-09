@@ -676,30 +676,65 @@ function setupSearch(countries) {
                     .classed("highlight-search", false)
                     .style("opacity", 1);
             });
+            // Remove any year lines
+            chart.selectAll(".year-search-line").remove();
             return;
         }
 
         // Search for country
         const matchedCountry = countries.find(c => c.toLowerCase().includes(query));
         if (matchedCountry) {
+            // Remove year lines if any
+            chart.selectAll(".year-search-line").remove();
+            
             countries.forEach(country => {
                 const isMatch = country === matchedCountry;
                 chart.selectAll(`.line-${country}`)
                     .classed("highlight-search", isMatch)
-                    .style("opacity", isMatch ? 1 : 0.2);
+                    .style("opacity", isMatch ? 1 : 0.15);
             });
             return;
         }
 
         // Search for year
         const yearMatch = parseInt(query);
-        if (!isNaN(yearMatch)) {
+        if (!isNaN(yearMatch) && yearMatch >= 2000 && yearMatch <= 2019) {
             const yearData = data.find(d => d.Year === yearMatch);
             if (yearData) {
-                drawYearLine(yearMatch);
-                updateBarChart(yearData);
-                updateStory(yearData);
+                // Draw a vertical line at the searched year
+                chart.selectAll(".year-search-line").remove();
+                
+                const yearLine = chart.append("line")
+                    .attr("class", "year-search-line")
+                    .attr("x1", xScale(yearMatch))
+                    .attr("x2", xScale(yearMatch))
+                    .attr("y1", 0)
+                    .attr("y2", height)
+                    .attr("stroke", isDarkMode ? "#06b6d4" : "#f59e0b")
+                    .attr("stroke-width", 3)
+                    .attr("stroke-dasharray", "8,4")
+                    .attr("opacity", 0.8);
+                
+                // Add label
+                chart.append("text")
+                    .attr("class", "year-search-line")
+                    .attr("x", xScale(yearMatch) + 5)
+                    .attr("y", 20)
+                    .text(`Year: ${yearMatch}`)
+                    .attr("fill", isDarkMode ? "#06b6d4" : "#f59e0b")
+                    .attr("font-size", "14px")
+                    .attr("font-weight", "bold");
+                
+                // Reset country opacities
+                countries.forEach(country => {
+                    chart.selectAll(`.line-${country}`)
+                        .classed("highlight-search", false)
+                        .style("opacity", 1);
+                });
             }
+        } else if (!isNaN(yearMatch)) {
+            // Invalid year range - clear the line
+            chart.selectAll(".year-search-line").remove();
         }
     });
 }
@@ -892,7 +927,7 @@ function detectAutoInsights(data, countries) {
         total: d3.sum(data, d => d[country])
     }));
     const highestEmitter = totals.reduce((a, b) => a.total > b.total ? a : b);
-    insights.push(`🏆 ${highestEmitter.country} is the highest total emitter (${formatNumber(highestEmitter.total)})`);
+    insights.push(`&#127942; ${highestEmitter.country} is the highest total emitter (${formatNumber(highestEmitter.total)})`);
 
     // 2. Fastest growing
     const growthRates = countries.map(country => {
@@ -902,7 +937,7 @@ function detectAutoInsights(data, countries) {
         return { country, growth };
     });
     const fastestGrowth = growthRates.reduce((a, b) => a.growth > b.growth ? a : b);
-    insights.push(`📈 ${fastestGrowth.country} grew fastest (${fastestGrowth.growth.toFixed(1)}% over the period)`);
+    insights.push(`&#128200; ${fastestGrowth.country} grew fastest (${fastestGrowth.growth.toFixed(1)}% over the period)`);
 
     // 3. Most volatile
     const volatility = countries.map(country => {
@@ -912,11 +947,11 @@ function detectAutoInsights(data, countries) {
         return { country, volatility: std / mean };
     });
     const mostVolatile = volatility.reduce((a, b) => a.volatility > b.volatility ? a : b);
-    insights.push(`📊 ${mostVolatile.country} has the most variable emissions pattern`);
+    insights.push(`&#128202; ${mostVolatile.country} has the most variable emissions pattern`);
 
     // 4. Peak year insight
     const peakYear = findPeakYear(data, countries);
-    insights.push(`⚡ Peak emissions year: ${peakYear}`);
+    insights.push(`&#9889; Peak emissions year: ${peakYear}`);
 
     // 5. Recent trend
     const recentData = data.slice(-3);
@@ -926,7 +961,7 @@ function detectAutoInsights(data, countries) {
     });
     const declining = recentTrend.filter(t => t.trend < 0);
     if (declining.length > 0) {
-        insights.push(`✓ ${declining.map(t => t.country).join(', ')} showing declining trend recently`);
+        insights.push(`&#10004; ${declining.map(t => t.country).join(', ')} showing declining trend recently`);
     }
 
     return insights;
@@ -943,10 +978,14 @@ function displayAutoInsights() {
     
     const bgColor = isDarkMode ? '#0a0a0a' : 'white';
     const textColor = isDarkMode ? '#ffffff' : '#2c3e50';
+    const borderColor = isDarkMode ? '#1a1a1a' : '#e2e8f0';
     
-    storyText.html(insights.map(insight => 
-        `<p style="margin: 10px 0; padding: 10px; background: ${bgColor}; border-radius: 6px; color: ${textColor};">${insight}</p>`
-    ).join(''));
+    // Display each insight as a separate styled paragraph
+    const insightsHTML = insights.map(insight => 
+        `<p style="margin: 10px 0; padding: 12px; background: ${bgColor}; border-radius: 8px; color: ${textColor}; border-left: 3px solid #6366f1; line-height: 1.6;">${insight}</p>`
+    ).join('');
+    
+    storyText.html(insightsHTML);
 }
 
 // =====================
@@ -964,10 +1003,15 @@ function setupEventListeners(countries) {
         applyCountryGrouping(countries);
     });
 
-    // Dark mode toggle
-    d3.select("#themeBtn").on("click", function() {
-        toggleDarkMode();
-    });
+    // Dark mode toggle (backup listener)
+    const themeBtn = document.getElementById("themeBtn");
+    if (themeBtn) {
+        themeBtn.addEventListener("click", function(e) {
+            console.log("Theme button clicked via event listener");
+            e.preventDefault();
+            window.toggleDarkMode();
+        });
+    }
 
     // Compare mode
     d3.select("#compareBtn").on("click", () => {
@@ -1162,25 +1206,43 @@ function updateGroupInsights(groupData, groupEntries) {
 // Dark Mode Toggle
 // =====================
 window.toggleDarkMode = function() {
+    console.log("Dark mode toggle clicked! Current state:", isDarkMode);
+    
     isDarkMode = !isDarkMode;
     
-    console.log("Toggling dark mode:", isDarkMode);
+    console.log("New dark mode state:", isDarkMode);
     
-    if (isDarkMode) {
-        document.body.classList.add("dark-mode");
-        document.getElementById("themeBtn").textContent = "☀️ Light";
-    } else {
-        document.body.classList.remove("dark-mode");
-        document.getElementById("themeBtn").textContent = "🌙 Dark";
-    }
-    
-    // Force update all SVG elements
-    forceUpdateAllCharts();
-    
-    // If compare mode is active, refresh it
-    if (compareMode && data) {
-        const countries = ["China", "USA", "India", "Germany"];
-        updateCompareView(data, countries);
+    try {
+        if (isDarkMode) {
+            document.body.classList.add("dark-mode");
+            const themeBtn = document.getElementById("themeBtn");
+            if (themeBtn) {
+                themeBtn.textContent = "\u2600\uFE0F Light";
+                themeBtn.classList.add("active");
+                console.log("Theme button updated to Light");
+            }
+        } else {
+            document.body.classList.remove("dark-mode");
+            const themeBtn = document.getElementById("themeBtn");
+            if (themeBtn) {
+                themeBtn.textContent = "\uD83C\uDF19 Dark";
+                themeBtn.classList.remove("active");
+                console.log("Theme button updated to Dark");
+            }
+        }
+        
+        // Force update all SVG elements
+        forceUpdateAllCharts();
+        
+        // If compare mode is active, refresh it
+        if (compareMode && data) {
+            const countries = ["China", "USA", "India", "Germany"];
+            updateCompareView(data, countries);
+        }
+        
+        console.log("Dark mode toggle completed successfully");
+    } catch (error) {
+        console.error("Error in toggleDarkMode:", error);
     }
 }
 

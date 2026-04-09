@@ -1,209 +1,282 @@
-    <!-- Bottom Charts -->
-    <div class="bottom-charts">
-        <div class="chart-container">
-            <h3>Year Comparison</h3>
-            <svg id="barChart" width="440" height="300"></svg>
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CO₂ Emissions Interactive Explorer</title>
+    <script src="https://d3js.org/d3.v7.min.js"></script>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<div class="page-wrapper">
+    <!-- Hero Section -->
+    <header class="hero">
+        <h1>&#127758; CO₂ Emissions Interactive Explorer</h1>
+        <p class="hero-subtitle">Discover global carbon emission patterns from 2000-2019 through interactive visualization</p>
+    </header>
+
+    <!-- Main Dashboard -->
+    <main class="dashboard">
+        <!-- Control Panel -->
+        <section class="control-panel">
+            <div class="control-group">
+                <label>Metric:</label>
+                <select id="metricSelect">
+                    <option value="absolute">Absolute Emissions</option>
+                    <option value="growth">Growth Rate (%)</option>
+                    <option value="cumulative">Cumulative Emissions</option>
+                    <option value="average">Average Emissions</option>
+                </select>
+            </div>
+            
+            <div class="control-group">
+                <label>Country Groups:</label>
+                <select id="groupSelect">
+                    <option value="none">No Grouping</option>
+                    <option value="developed">Developed vs Developing</option>
+                    <option value="size">By Emission Size</option>
+                    <option value="region">By Region</option>
+                </select>
+            </div>
+            
+            <div class="control-group">
+                <label>Search:</label>
+                <input type="text" id="searchInput" placeholder="Country or year...">
+            </div>
+            
+            <div class="control-group">
+                <label>Compare Mode:</label>
+                <button id="compareBtn" class="toggle-btn">OFF</button>
+            </div>
+            
+            <div class="control-group">
+                <label>Theme:</label>
+                <button id="themeBtn" class="toggle-btn" onclick="toggleDarkMode()">&#127769; Dark</button>
+            </div>
+            
+            <div class="control-group actions">
+                <button id="playBtn" class="action-btn">&#9654; Play</button>
+                <button id="resetZoom" class="action-btn">&#8634; Reset</button>
+                <button id="autoInsight" class="action-btn">&#128161; Insights</button>
+            </div>
+        </section>
+
+        <!-- Main Chart -->
+        <section class="chart-section main-chart-section">
+            <div class="chart-header">
+                <h2>Emission Trends Over Time</h2>
+                <div id="brush-info" class="brush-info">💡 Select a time range by brushing on the chart</div>
+            </div>
+            <div class="chart-wrapper">
+                <svg id="chart" width="900" height="500"></svg>
+                <div id="tooltip"></div>
+            </div>
+        </section>
+
+        <!-- Side Panels -->
+        <section class="side-panels">
+            <div class="panel insights-panel">
+                <h3>&#128202; Insights</h3>
+                <p id="story">Explore how CO₂ emissions evolved from 2000–2019. Hover for details, zoom to focus, and click legend to compare countries.</p>
+            </div>
+            
+            <div class="panel metrics-panel">
+                <h3>&#128200; Derived Metrics</h3>
+                <div id="metrics-content"></div>
+            </div>
+            
+            <div id="compare-view" class="panel compare-panel" style="display: none;">
+                <h3>&#128260; Comparison View</h3>
+                <div class="compare-controls">
+                    <label>Select Year:</label>
+                    <select id="compareYearSelect"></select>
+                </div>
+                <svg id="compareChart" width="400" height="300"></svg>
+            </div>
+        </section>
+
+        <!-- Bottom Charts -->
+        <section class="bottom-charts">
+            <div class="chart-card">
+                <h3>&#128202; Year Comparison</h3>
+                <svg id="barChart" width="440" height="300"></svg>
+            </div>
+            <div class="chart-card">
+                <h3>&#128200; Trend Analysis</h3>
+                <svg id="trendChart" width="440" height="300"></svg>
+            </div>
+        </section>
+    </main>
+
+    <!-- Report Section -->
+    <section class="report-section">
+        <div class="report-container">
+            <h2>&#128196; Project Report</h2>
+            
+            <div class="report-content">
+                <section class="report-item">
+                    <h3>1. Problem Statement & Research Questions</h3>
+                    <p>This interactive visualization tool explores critical questions about global carbon emissions:</p>
+                    <ul>
+                        <li><strong>How have CO₂ emission trends evolved across major nations from 2000 to 2019?</strong></li>
+                        <li><strong>Which countries show the fastest emission growth, and which are declining?</strong></li>
+                        <li><strong>What is the magnitude of emission gaps between developed and developing nations?</strong></li>
+                        <li><strong>What critical turning points occurred during this two-decade period?</strong></li>
+                    </ul>
+                    <p>Through interactive exploration, users can uncover patterns in carbon emissions across four representative countries—China, USA, India, and Germany—revealing the impact of industrialization, economic development, and environmental policies.</p>
+                </section>
+
+                <hr>
+
+                <section class="report-item">
+                    <h3>2. Design Rationale</h3>
+                    
+                    <h4>Visualization Choices</h4>
+                    <p><strong>Primary Chart (Line + Scatter):</strong> Optimal for temporal trends with precise data points. Alternatives like area charts would cause occlusion, while bar charts would be too cluttered with 20 years of data.</p>
+                    
+                    <p><strong>Bar Chart:</strong> Ideal for cross-country comparison within a single year, updating dynamically on hover.</p>
+                    
+                    <p><strong>Trend Analysis (Growth Rate):</strong> Displays year-over-year percentage changes, revealing acceleration patterns that absolute values obscure.</p>
+                    
+                    <p><strong>Comparison View (Radial):</strong> Innovative circular design that is visually engaging and space-efficient compared to traditional bar charts.</p>
+
+                    <h4>Key Design Principles</h4>
+                    <ul>
+                        <li><strong>Focus:</strong> Four representative countries that tell a compelling story</li>
+                        <li><strong>Multi-View Coordination:</strong> Four charts update in perfect synchronization</li>
+                        <li><strong>Progressive Disclosure:</strong> Clean default view with details on interaction</li>
+                        <li><strong>Visual Hierarchy:</strong> Strategic use of color, size, and opacity</li>
+                    </ul>
+                </section>
+
+                <hr>
+
+                <section class="report-item">
+                    <h3>3. Data & Technology</h3>
+                    <p><strong>Data Source:</strong> World Bank Open Data — CO2 emissions (kt)</p>
+                    <p><strong>Reference:</strong> <a href="https://data.worldbank.org/indicator/EN.ATM.CO2E.KT" target="_blank" style="color: var(--primary); text-decoration: none;">https://data.worldbank.org/indicator/EN.ATM.CO2E.KT</a></p>
+                    <p><strong>Countries:</strong> China, USA, India, and Germany (2000-2019)</p>
+                    <p><strong>Technology Stack:</strong></p>
+                    <ul>
+                        <li>D3.js v7 - Core visualization library</li>
+                        <li>Native HTML/CSS/JavaScript - No additional frameworks</li>
+                    </ul>
+                    <p><strong>Inspiration:</strong> NameVoyager (dynamic query), Zipdecode (interactive exploration), GitHub Dark Mode (theme design)</p>
+                </section>
+
+                <hr>
+
+                <section class="report-item">
+                    <h3>4. Development Process</h3>
+                    <p><strong>Total Development Time:</strong> Approximately 25 hours</p>
+                    
+                    <table class="report-table">
+                        <thead>
+                            <tr>
+                                <th>Phase</th>
+                                <th>Features</th>
+                                <th>Time</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td>Foundation</td>
+                                <td>Line chart, scatter plot, tooltips</td>
+                                <td>~3 hours</td>
+                            </tr>
+                            <tr>
+                                <td>Interaction</td>
+                                <td>Zoom, brush, filtering, animation</td>
+                                <td>~4 hours</td>
+                            </tr>
+                            <tr>
+                                <td>Multi-View</td>
+                                <td>Bar chart, trend chart, coordination</td>
+                                <td>~3 hours</td>
+                            </tr>
+                            <tr>
+                                <td>Advanced</td>
+                                <td>Metric switching, search, grouping</td>
+                                <td>~4 hours</td>
+                            </tr>
+                            <tr>
+                                <td>UI/UX</td>
+                                <td>Dashboard layout, dark mode</td>
+                                <td>~4 hours</td>
+                            </tr>
+                            <tr>
+                                <td>Refinement</td>
+                                <td>Comparison view, auto-insights</td>
+                                <td>~4 hours</td>
+                            </tr>
+                            <tr>
+                                <td>Testing</td>
+                                <td>Bug fixes, optimization</td>
+                                <td>~3 hours</td>
+                            </tr>
+                        </tbody>
+                    </table>
+
+                    <h4>Key Challenges</h4>
+                    <ul>
+                        <li><strong>Dark Mode:</strong> Ensuring all SVG and HTML elements adapt to pure black theme (#000000)</li>
+                        <li><strong>Multi-View Sync:</strong> Maintaining perfect coordination across four chart types</li>
+                        <li><strong>Radial Labels:</strong> Precise trigonometric calculations for label positioning</li>
+                    </ul>
+                </section>
+
+                <hr>
+
+                <section class="report-item">
+                    <h3>5. Features Implemented</h3>
+                    
+                    <h4>Basic Requirements ✓</h4>
+                    <ul>
+                        <li>User interaction (click, drag, zoom, brush)</li>
+                        <li>Real-time response to all interactions</li>
+                        <li>Clear, intuitive user interface</li>
+                    </ul>
+
+                    <h4>Advanced Features ✓</h4>
+                    <ul>
+                        <li>9 distinct interaction methods</li>
+                        <li>4 coordinated visualization views</li>
+                        <li>Professional dark mode (pure black)</li>
+                        <li>Automated insight detection</li>
+                        <li>Country grouping and aggregation</li>
+                        <li>Year selector for comparisons</li>
+                        <li>Smooth animations and transitions</li>
+                    </ul>
+                </section>
+
+                <hr>
+
+                <section class="report-item">
+                    <h3>6. Summary</h3>
+                    <p>This project delivers a feature-rich, beautifully designed interactive CO₂ emissions visualization that exceeds all basic requirements through:</p>
+                    <ol>
+                        <li><strong>Professional Dark Mode</strong> - Pure black theme matching industry standards</li>
+                        <li><strong>Intelligent Analysis</strong> - Automated insight detection algorithm</li>
+                        <li><strong>Innovative Design</strong> - Radial comparison chart with unique perspective</li>
+                        <li><strong>Comprehensive Interactions</strong> - Nine methods covering all exploration needs</li>
+                        <li><strong>Seamless Coordination</strong> - Four charts working in perfect harmony</li>
+                    </ol>
+                    <p>The visualization demonstrates how thoughtful design and robust implementation create effective data exploration experiences.</p>
+                </section>
+            </div>
         </div>
-        <div class="chart-container">
-            <h3>Trend Analysis</h3>
-            <svg id="trendChart" width="440" height="300"></svg>
-        </div>
-    </div>
-</div>
+    </section>
 
-<!-- Project Report Section -->
-<div class="report-section">
-    <div class="report-container">
-        <h2>📄 Project Report</h2>
-        
-        <div class="report-content">
-            <section class="report-section-item">
-                <h3>1. Problem Statement & Research Questions</h3>
-                <p>This interactive visualization tool explores critical questions about global carbon emissions:</p>
-                <ul>
-                    <li><strong>How have CO₂ emission trends evolved across major nations from 2000 to 2019?</strong></li>
-                    <li><strong>Which countries show the fastest emission growth, and which are declining?</strong></li>
-                    <li><strong>What is the magnitude of emission gaps between developed and developing nations?</strong></li>
-                    <li><strong>What critical turning points occurred during this two-decade period?</strong></li>
-                </ul>
-                <p>Through interactive exploration, users can uncover patterns in carbon emissions across four representative countries—China, USA, India, and Germany—revealing the impact of industrialization, economic development, and environmental policies.</p>
-            </section>
-
-            <hr>
-
-            <section class="report-section-item">
-                <h3>2. Design Rationale</h3>
-                
-                <h4>Visualization Choices</h4>
-                <p><strong>Primary Chart (Line + Scatter):</strong> Optimal for temporal trends with precise data points. Alternatives like area charts would cause occlusion, while bar charts would be too cluttered with 20 years of data.</p>
-                
-                <p><strong>Bar Chart:</strong> Ideal for cross-country comparison within a single year, updating dynamically on hover.</p>
-                
-                <p><strong>Trend Analysis (Growth Rate):</strong> Displays year-over-year percentage changes, revealing acceleration patterns that absolute values obscure.</p>
-                
-                <p><strong>Comparison View (Radial):</strong> Innovative circular design that is visually engaging and space-efficient compared to traditional bar charts.</p>
-
-                <h4>Interaction Technologies</h4>
-                <table class="report-table">
-                    <thead>
-                        <tr>
-                            <th>Feature</th>
-                            <th>Implementation</th>
-                            <th>Purpose</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        <tr>
-                            <td>Zoom & Pan</td>
-                            <td>D3 Zoom API</td>
-                            <td>Focus on specific time periods</td>
-                        </tr>
-                        <tr>
-                            <td>Brushing</td>
-                            <td>D3 Brush</td>
-                            <td>Time range selection</td>
-                        </tr>
-                        <tr>
-                            <td>Tooltips</td>
-                            <td>Hover Events</td>
-                            <td>Details on demand</td>
-                        </tr>
-                        <tr>
-                            <td>Metric Switching</td>
-                            <td>Dropdown</td>
-                            <td>Switch data dimensions</td>
-                        </tr>
-                        <tr>
-                            <td>Animation</td>
-                            <td>Timer Loop</td>
-                            <td>Year-by-year evolution</td>
-                        </tr>
-                    </tbody>
-                </table>
-
-                <h4>Key Design Principles</h4>
-                <ul>
-                    <li><strong>Focus:</strong> Four representative countries that tell a compelling story</li>
-                    <li><strong>Multi-View Coordination:</strong> Four charts update in perfect synchronization</li>
-                    <li><strong>Progressive Disclosure:</strong> Clean default view with details on interaction</li>
-                    <li><strong>Visual Hierarchy:</strong> Strategic use of color, size, and opacity</li>
-                </ul>
-            </section>
-
-            <hr>
-
-            <section class="report-section-item">
-                <h3>3. Data & Technology</h3>
-                <p><strong>Data Source:</strong> CO₂ Emissions Data (2000-2019) for China, USA, India, and Germany from <code>data.csv</code></p>
-                <p><strong>Technology Stack:</strong></p>
-                <ul>
-                    <li>D3.js v7 - Core visualization library</li>
-                    <li>Native HTML/CSS/JavaScript - No additional frameworks</li>
-                </ul>
-                <p><strong>Inspiration:</strong> NameVoyager (dynamic query), Zipdecode (interactive exploration), GitHub Dark Mode (theme design)</p>
-            </section>
-
-            <hr>
-
-            <section class="report-section-item">
-                <h3>4. Development Process</h3>
-                <p><strong>Total Development Time:</strong> Approximately 25 hours</p>
-                
-                <table class="report-table">
-                    <thead>
-                        <tr>
-                            <th>Phase</th>
-                            <th>Features</th>
-                            <th>Time</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        <tr>
-                            <td>Foundation</td>
-                            <td>Line chart, scatter plot, tooltips</td>
-                            <td>~3 hours</td>
-                        </tr>
-                        <tr>
-                            <td>Interaction</td>
-                            <td>Zoom, brush, filtering, animation</td>
-                            <td>~4 hours</td>
-                        </tr>
-                        <tr>
-                            <td>Multi-View</td>
-                            <td>Bar chart, trend chart, coordination</td>
-                            <td>~3 hours</td>
-                        </tr>
-                        <tr>
-                            <td>Advanced</td>
-                            <td>Metric switching, search, grouping</td>
-                            <td>~4 hours</td>
-                        </tr>
-                        <tr>
-                            <td>UI/UX</td>
-                            <td>Dashboard layout, dark mode</td>
-                            <td>~4 hours</td>
-                        </tr>
-                        <tr>
-                            <td>Refinement</td>
-                            <td>Comparison view, auto-insights</td>
-                            <td>~4 hours</td>
-                        </tr>
-                        <tr>
-                            <td>Testing</td>
-                            <td>Bug fixes, optimization</td>
-                            <td>~3 hours</td>
-                        </tr>
-                    </tbody>
-                </table>
-
-                <h4>Key Challenges</h4>
-                <ul>
-                    <li><strong>Dark Mode:</strong> Ensuring all SVG and HTML elements adapt to pure black theme (#000000)</li>
-                    <li><strong>Multi-View Sync:</strong> Maintaining perfect coordination across four chart types</li>
-                    <li><strong>Radial Labels:</strong> Precise trigonometric calculations for label positioning</li>
-                </ul>
-            </section>
-
-            <hr>
-
-            <section class="report-section-item">
-                <h3>5. Features Implemented</h3>
-                
-                <h4>Basic Requirements ✓</h4>
-                <ul>
-                    <li>User interaction (click, drag, zoom, brush)</li>
-                    <li>Real-time response to all interactions</li>
-                    <li>Clear, intuitive user interface</li>
-                </ul>
-
-                <h4>Advanced Features ✓</h4>
-                <ul>
-                    <li>9 distinct interaction methods</li>
-                    <li>4 coordinated visualization views</li>
-                    <li>Professional dark mode (pure black)</li>
-                    <li>Automated insight detection</li>
-                    <li>Country grouping and aggregation</li>
-                    <li>Year selector for comparisons</li>
-                    <li>Smooth animations and transitions</li>
-                </ul>
-            </section>
-
-            <hr>
-
-            <section class="report-section-item">
-                <h3>6. Summary</h3>
-                <p>This project delivers a feature-rich, beautifully designed interactive CO₂ emissions visualization that exceeds all basic requirements through:</p>
-                <ol>
-                    <li><strong>Professional Dark Mode</strong> - Pure black theme matching industry standards</li>
-                    <li><strong>Intelligent Analysis</strong> - Automated insight detection algorithm</li>
-                    <li><strong>Innovative Design</strong> - Radial comparison chart with unique perspective</li>
-                    <li><strong>Comprehensive Interactions</strong> - Nine methods covering all exploration needs</li>
-                    <li><strong>Seamless Coordination</strong> - Four charts working in perfect harmony</li>
-                </ol>
-                <p>The visualization demonstrates how thoughtful design and robust implementation create effective data exploration experiences.</p>
-            </section>
-        </div>
-    </div>
+    <!-- Footer -->
+    <footer class="footer">
+        <p><strong>Data Source:</strong> World Bank Open Data — CO2 emissions (kt): 
+            <a href="https://data.worldbank.org/indicator/EN.ATM.CO2E.KT" target="_blank" style="color: var(--primary); text-decoration: none;">
+                https://data.worldbank.org/indicator/EN.ATM.CO2E.KT
+            </a>
+        </p>
+        <p style="margin-top: 10px;">CO₂ Emissions Interactive Explorer | Data Visualization Project | 2026</p>
+    </footer>
 </div>
 
 <script src="script.js"></script>
